@@ -57,6 +57,13 @@ module tb_decrypter             ;
 								.done(done)
 							);
 
+//pre_len range is [7,12]
+//preamble fix to 'h7E
+// string has to be variable
+// pat_sel [0,5]
+
+
+
 	initial begin	 :initial_loop
 
 		clk   = 'b0;
@@ -156,25 +163,24 @@ module tb_decrypter             ;
 
 		// encrypt the message
 		for (int i=0; i<64; i++) begin		   // testbench will change on falling clocks
-			msg_crypto2[i]        = msg_padded2[i] ^ lfsr2[i];  //{1'b0,LFSR[6:0]};	   // encrypt 7 LSBs
+			msg_crypto2[i]        = msg_padded2[i] ^ lfsr2[i];  //{3'b0,LFSR[4:0]};	   // encrypt 7 LSBs
 			$display("LFSR = %h, msg_bit = %h, msg_crypto = %h",lfsr2[i],msg_padded2[i],msg_crypto2[i]);
-			str_enc2[i]           = string'(msg_crypto2[i]);
 		end
 		
-		$display("here is the original message with %s preamble padding", preamble);
-		for(int jj=0; jj<64; jj++)
-			$write("%s",msg_padded2[jj]);
+		// $display("here is the original message with %s preamble padding", preamble);
+		// for(int jj=0; jj<64; jj++)
+			// $write("%s",msg_padded2[jj]);
 			
-		$display("\n");
-		$display("here is the padded and encrypted pattern in ASCII");
-		for(int jj=0; jj<64; jj++)
-			$write("%s",str_enc2[jj]);
+		// $display("\n");
+		// $display("here is the padded and encrypted pattern in ASCII");
+		// for(int jj=0; jj<64; jj++)
+			// $write("%s",str_enc2[jj]);
 			
-		$display("\n");
-		$display("here is the padded pattern in hex"); 
-		for(int jj=0; jj<64; jj++)
-			$write(" %h",msg_padded2[jj]);
-		$display("\n");
+		// $display("\n");
+		// $display("here is the padded pattern in hex"); 
+		// for(int jj=0; jj<64; jj++)
+			// $write(" %h",msg_padded2[jj]);
+		// $display("\n");
 
 		// run decryption program 
 		// mem_tb_control = 1;
@@ -209,26 +215,26 @@ module tb_decrypter             ;
 		// mem_tb_control = 0;
 		
 		
-		$display("dut decryption = ");
-		for(int q=0; q<64-pre_length; q++)
-			$writeh("  ",msg_decryp2[q]);		       
-		$display();
-		$display("run decryption:");
+		// $display("dut decryption = ");
+		// for(int q=0; q<64-pre_length; q++)
+			// $writeh("  ",msg_decryp2[q]);		       
+		// $display();
+		// $display("run decryption:");
 
-		for(int nn=0; nn<64; nn++)			   // count leading underscores
-			if(str2[nn]==preamble) 
-				ct++; 
-			else 
-			break;
-		$display("ct = %d",ct);
+		// for(int nn=0; nn<64; nn++)			   // count leading underscores
+			// if(str2[nn]==preamble) 
+				// ct++; 
+			// else 
+			// break;
+		// $display("ct = %d",ct);
 		// for(int n=0; n<str_len+1; n++) begin
 			// @(posedge clk);
 				// raddr_tb          <= n;
 			// @(posedge clk);
 				// msg_decryp2[n] <= data_out_tb;
 		// end
-		for(int rr=0; rr<str_len+1; rr++)
-			str_dec2[rr] = string'(msg_decryp2[rr]);
+		// for(int rr=0; rr<str_len+1; rr++)
+			// str_dec2[rr] = string'(msg_decryp2[rr]);
 		@(posedge clk)
 		for(int qq=0; qq<(64-pre_length); qq++) begin
 			$write("From TB = %s, FROM DUT = %s\n",msg_padded2[qq+pre_length],msg_decryp2[qq]);
