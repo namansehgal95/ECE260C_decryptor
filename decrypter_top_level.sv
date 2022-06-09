@@ -1,5 +1,5 @@
 
-module decrypter_top_level(
+module decrypter_top_level( 
 	input          	clk, 
 	input			init,
 	input 	[7:0]	preamble,
