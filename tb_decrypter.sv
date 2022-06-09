@@ -200,7 +200,8 @@ module tb_decrypter             ;
 		repeat(5) @(posedge clk); // add 5 cycle delay
 		for(int nmn=0; nmn<64; nmn++) begin
 			@(posedge clk);
-			raddr_tb   	<= nmn+64;     
+			raddr_tb   	<= nmn+64; 
+			#1ns;
 			msg_decryp2[nmn] <= data_out_tb ;
 			//dut.dm1.core[qp] <= msg_crypto2[qp];
 		end
@@ -228,10 +229,10 @@ module tb_decrypter             ;
 		for(int rr=0; rr<str_len+1; rr++)
 			str_dec2[rr] = string'(msg_decryp2[rr]);
 		@(posedge clk)
-		for(int qq=64; qq<(128-pre_length); qq++) begin
-			$write("From TB = %s, FROM DUT = %s\n",msg_padded2[qq-64+pre_length],dut.dm1.core[qq]);
+		for(int qq=0; qq<(64-pre_length); qq++) begin
+			$write("From TB = %s, FROM DUT = %s\n",msg_padded2[qq+pre_length],msg_decryp2[qq]);
 			$writeh("   ");
-			if(msg_padded2[qq-64+pre_length] != dut.dm1.core[qq]) 
+			if(msg_padded2[qq+pre_length] != msg_decryp2[qq]) 
 				fault_count++;
 		end
 		$display();
@@ -252,9 +253,9 @@ module tb_decrypter             ;
 		#20ns $stop;
 	end  :initial_loop
 
-always begin							 // continuous loop
-  #5ns clk = 1;							 // clock tick
-  #5ns clk = 0;							 // clock tock
-end										 // continue
+	always begin							 // continuous loop
+		#5ns clk = 1;							 // clock tick
+		#5ns clk = 0;							 // clock tock
+	end										 // continue
 
 endmodule

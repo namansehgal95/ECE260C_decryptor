@@ -196,7 +196,7 @@ end
 		   waddr = 'd64;
 		 end
 	72  : begin //works with 66 also
-            done = 'b1;
+            //done = 'b1;
  		    raddr =	'd0;
  		    waddr = 'd64; 
 	     end
@@ -215,5 +215,7 @@ end
 	     end
   endcase
 end
+
+assign done = cycle_ct === 'd72;
 
 endmodule
