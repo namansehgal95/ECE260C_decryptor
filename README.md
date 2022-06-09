@@ -1,5 +1,5 @@
 # ECE260C_decryptor
-tb_decrypter.sv
+tb_decrypter.sv\n
 decryption_wrapper.sv
 decrypter_top_level.sv
 dat_mem.sv
