@@ -9,7 +9,6 @@ module tb_decrypter             ;
 	logic	[7:0]	preamble		  ;
 	
 	
-	logic       	wr_en_tb             ;          // DUT memory core write enable
 	logic 	[7:0]	raddr_tb             ,
 					waddr_tb             ,
 					data_in_tb           ;
@@ -37,19 +36,23 @@ module tb_decrypter             ;
 	int 		ct                        ;
 	int 		lk                        ;		   // counts leading spaces for program 3
 	int 		pat_sel                   ;          // LFSR pattern select
+	logic 		reset;
 	
 	//decrypter instance
-	decrypter_top_level dut(
+	decryption_wrapper dut_wrapper(
 								.clk			(clk),
+								.reset			(reset), 
 								.init			(init),
 								.preamble		(preamble),
 								.pre_len		(pre_length),
-								.wr_en_tb		(wr_en_tb		),
-								.raddr_tb		(raddr_tb		),
-								.waddr_tb		(waddr_tb		),
-								.data_in_tb		(data_in_tb		),
-								.data_out_tb	(data_out_tb	),
-								.mem_tb_control	(mem_tb_control	),
+								// .wr_en_tb		(wr_en_tb		),
+								// .raddr_tb		(raddr_tb		),
+								// .waddr_tb		(waddr_tb		),
+								// .data_in_tb		(data_in_tb		),
+								// .data_out_tb	(data_out_tb	),
+								// .mem_tb_control	(mem_tb_control	),
+								.encrypted_data (msg_crypto2),
+								.decrypted_data (msg_decryp2),
 								
 								.done(done)
 							);
@@ -58,9 +61,10 @@ module tb_decrypter             ;
 
 		clk   = 'b0;
 		init  = 'b1;
-		wr_en_tb = 'b0;
 		// str2 = "@`@@``@@@```@@@@````@@@@@`````@@@@@@``````";
 		str2 = "Hey_Hamm_Look_Im_Picasso";
+		reset = 'b1;
+		@(posedge clk) reset = 'b0;
 		// str2 = "Sometimes_Ill_start_a_sentence_and_I_dont_even_know_where_its_going_I_just_hope_I_find_it_along_the_way";
 		// str2 = "Im_not_superstitious_but_I_am_a_little_stitious";
 		// str2 = "I_knew_exactly_what_to_do_but_in_a_much_more_real_sense_I_had_no_idea_what_to_do";
@@ -173,22 +177,19 @@ module tb_decrypter             ;
 		$display("\n");
 
 		// run decryption program 
-		mem_tb_control = 1;
+		// mem_tb_control = 1;
+		// repeat(5) @(posedge clk); // add 5 cycle delay
+		// for(int qp=0; qp<64; qp++) begin
+			// @(posedge clk);
+			// wr_en_tb   <= 'b1;                   // turn on memory write enable
+			// waddr_tb   <= qp;                 // write encrypted message to mem [0:63]
+			// data_in_tb <= msg_crypto2[qp];
+			// dut.dm1.core[qp] <= msg_crypto2[qp];
+		// end
+
 		repeat(5) @(posedge clk); // add 5 cycle delay
-		for(int qp=0; qp<64; qp++) begin
-			@(posedge clk);
-			wr_en_tb   <= 'b1;                   // turn on memory write enable
-			waddr_tb   <= qp;                 // write encrypted message to mem [0:63]
-			data_in_tb <= msg_crypto2[qp];
-			//dut.dm1.core[qp] <= msg_crypto2[qp];
-		end
-    
-		@(posedge clk)
-			wr_en_tb   <= 'b0; 			// turn off mem write for rest of simulation
-		mem_tb_control = 0;
-		
 		@(posedge clk) 
-		init <= 'b0 ;
+			init <= 'b0 ;
 		repeat(6) @(posedge clk);              // wait for 6 clock cycles of nominal 10ns each
 		
 		wait(done);                            // wait for DUT's done flag to go high
@@ -196,16 +197,16 @@ module tb_decrypter             ;
 		//$display("match = %b  foundit = %d",dut.match,dut.foundit);
 		
 		// read memory post decryption
-		mem_tb_control = 1;
-		repeat(5) @(posedge clk); // add 5 cycle delay
-		for(int nmn=0; nmn<64; nmn++) begin
-			@(posedge clk);
-			raddr_tb   	<= nmn+64; 
-			#1ns;
-			msg_decryp2[nmn] <= data_out_tb ;
-			//dut.dm1.core[qp] <= msg_crypto2[qp];
-		end
-		mem_tb_control = 0;
+		// mem_tb_control = 1;
+		// repeat(5) @(posedge clk); // add 5 cycle delay
+		// for(int nmn=0; nmn<64; nmn++) begin
+			// @(posedge clk);
+			// raddr_tb   	<= nmn+64; 
+			// #1ns;
+			// msg_decryp2[nmn] <= data_out_tb ;
+			// dut.dm1.core[qp] <= msg_crypto2[qp];
+		// end
+		// mem_tb_control = 0;
 		
 		
 		$display("dut decryption = ");
@@ -213,7 +214,7 @@ module tb_decrypter             ;
 			$writeh("  ",msg_decryp2[q]);		       
 		$display();
 		$display("run decryption:");
-		init = 'b1;
+
 		for(int nn=0; nn<64; nn++)			   // count leading underscores
 			if(str2[nn]==preamble) 
 				ct++; 
@@ -237,14 +238,14 @@ module tb_decrypter             ;
 		end
 		$display();
    
-		for(int ss=0; ss<str_len+1; ss++)
+		for(int ss=0; ss<str_len; ss++)
 			$write("%s",str_dec2[ss]);
-		$write();
+		$write("\n");
 		$display("fault_count = %d",fault_count); 
 		$write("Final Decrypted string = ");
 		
-		for(int qq=64; qq<(64+str_len); qq++) 
-			$write("%s",dut.dm1.core[qq]);
+		// for(int qq=64; qq<(64+str_len); qq++) 
+			// $write("%s",dut.dm1.core[qq]);
 		
 		$display("\n");  
 //    $display("%d bench msg: %h dut msg: %h    %s",
