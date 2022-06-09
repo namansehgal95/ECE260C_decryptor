@@ -1,14 +1,54 @@
 
 module decrypter_top_level(
-  input          clk, init, 
-  output logic   done);
+	input          	clk, 
+	input			init,
+	input 	[7:0]	preamble,
+	input 	[3:0] 	pre_len,
+	
+	// Memory Interface
+	input 			wr_en_tb	,
+	input 	[7:0]	raddr_tb	,
+	input 	[7:0]	waddr_tb	,
+	input 	[7:0]	data_in_tb	,
+	output 	logic [7:0]	data_out_tb	,
+	input 			mem_tb_control,
+	
+	output logic   done
+	);
 
 // memory interface
-  logic          wr_en;
-  logic    [7:0] raddr, 
-                 waddr,
-                 data_in;
-  logic    [7:0] data_out;  
+	logic          wr_en;
+	logic    [7:0] raddr, 
+					waddr,
+					data_in;
+	logic    [7:0] data_out;  
+	
+	logic          wr_en_mux;
+	logic    [7:0] raddr_mux, 
+					waddr_mux,
+					data_in_mux;
+	logic    [7:0] data_out_mux;  
+  
+	always_comb begin
+		if(mem_tb_control)
+		begin
+			wr_en_mux 	= wr_en_tb;
+			raddr_mux 	= raddr_tb;
+			waddr_mux 	= waddr_tb;
+			data_in_mux	= data_in_tb;
+			data_out_tb = data_out_mux;
+		end
+		else
+		begin
+			wr_en_mux 	= wr_en;
+			raddr_mux 	= raddr;
+			waddr_mux 	= waddr;
+			data_in_mux	= data_in;
+			data_out 	= data_out_mux;
+		end
+	end
+  
+  
   
 // program counter             
   logic[15:0] cycle_ct = 0;
@@ -29,8 +69,14 @@ module decrypter_top_level(
   logic[5:0] match;					 // index of foundit
   int i;
 
-  dat_mem dm1(.clk,.write_en(wr_en),.raddr,.waddr,
-       .data_in,.data_out);                   // instantiate data memory
+  dat_mem dm1(
+				.clk		(clk),
+				.write_en	(wr_en_mux),
+				.raddr		(raddr_mux),
+				.waddr		(waddr_mux),
+				.data_in	(data_in_mux),
+				.data_out	(data_out_mux)
+			);                   
 /* We need to advance the LFSR(s) once per clock cycle. 
 Same with raddr, waddr, since we can physically do one memory read and/or write
 per clock cycle. 
@@ -83,7 +129,7 @@ per clock cycle.
     data_in = {data_out[7:5],(data_out[4:0]^LFSR_state[foundit])};
   end
   
- assign start = data_out[4:0] ^ 5'h1E;  // since first encrypted character was LFSR_state ^ 0x7E
+ assign start = data_out[4:0] ^ preamble[4:0];  // since first encrypted character was LFSR_state ^ 0x7E
 
 logic [7:0] temp_check [0:5];
 always_comb
@@ -108,7 +154,7 @@ end
 	  if(cycle_ct<=6 && cycle_ct>=2) begin
 	    $display("data_out = %h",data_out);
 	    for(i=0; i<6; i++) begin
-	      match[i] <= match[i] & ({data_out[7:5],(data_out[4:0]^LFSR_state[i])} == 8'h7E);
+	      match[i] <= match[i] & ({data_out[7:5],(data_out[4:0]^LFSR_state[i])} == preamble);
 		  $display("match[i] = %h %d",match[i],i);
 		end
       end
@@ -131,39 +177,39 @@ end
 	wr_en     = 'b0;
   case(cycle_ct)
 	0: begin 
-           raddr     = 'd128;
-		   waddr     = 'd192;
+           raddr     = 'd0;
+		   waddr     = 'd64;
 	     end		       // no op
 	1: begin 
            load_LFSR = 'b1;
-           raddr     = 'd128;
-		   waddr     = 'd192;
+           raddr     = 'd0;
+		   waddr     = 'd64;
 	     end		       // no op
 	2  : begin				   
            LFSR_en   = 'b1;	   // initialize the 6 LFSRs     
-           raddr     = 'd128;
-		   waddr     = 'd192;
+           raddr     = 'd0;
+		   waddr     = 'd64;
          end
 	3  : begin			       // training seq.
 	       LFSR_en = 'b1;
 		   raddr++;
-		   waddr = 'd192;
+		   waddr = 'd64;
 		 end
 	72  : begin //works with 66 also
             done = 'b1;
- 		    raddr =	'd128;
- 		    waddr = 'd192; 
+ 		    raddr =	'd0;
+ 		    waddr = 'd64; 
 	     end
 	default: begin
 	       LFSR_en = 'b1;
            raddr ++; 
-           if(cycle_ct>8) begin
+           if(cycle_ct>(pre_len+1)) begin
 			 wr_en = 'b1;
-			 if(cycle_ct>9)
+			 if(cycle_ct>(pre_len+2))
 			   waddr++;
 		   end
 		   else begin
-		     waddr = 'd192;
+		     waddr = 'd64;
 			 wr_en = 'b0;
 		   end
 	     end
